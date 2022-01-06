@@ -123,7 +123,7 @@ get_table_year <- function(reference_code, model_code, make_code) {
 }
 
 ui <- dashboardPage(
-  dashboardHeader(title = "Histórico de valores de veículos FIPE"),
+  dashboardHeader(title = "Veículos FIPE"),
   dashboardSidebar(
     selectInput("data_referencia",
                 "Data de Referência",
