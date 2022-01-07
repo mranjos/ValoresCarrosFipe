@@ -11,8 +11,6 @@
 # install.packages("shinymaterial")
 # install.packages("shinydashboard")
 
-Sys.setlocale(locale = "Portuguese")
-
 library(shiny)
 library(fipe)
 library(knitr)
@@ -36,6 +34,18 @@ get_reference <-  function(date) {
   ) %>%
     httr::content("text", encoding = "UTF-8") %>%
     jsonlite::fromJSON() %>%
+    dplyr::mutate(Mes = gsub("janeiro","january",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("fevereiro","february",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("março","march",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("abril","april",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("maio","may",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("junho","june",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("julho","july",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("agosto","august",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("setembro","september",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("outubro","october",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("novembro","november",Mes)) %>% 
+    dplyr::mutate(Mes = gsub("dezembro","december",Mes)) %>%  
     dplyr::mutate(date = lubridate::dmy(paste0("01/", Mes))) %>%
     dplyr::select(date, reference_code = Codigo) %>%
     dplyr::filter(date %in% date_month) %>%
