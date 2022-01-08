@@ -12,6 +12,7 @@
 # install.packages("shinydashboard")
 # install.packages("ggiraph")
 
+Sys.setlocale(locale = "English")
 library(shiny)
 library(knitr)
 library(dplyr)
@@ -97,14 +98,14 @@ clean_name <- function(x) {
 # consulta as marcas disponiveis para um determinado mes
 # de referencia e retorna o codigo e o nome correspondente
 #
-get_make_aux <- function(reference_code) {
+get_make_aux <- function(reference_code, reference_veiculo) {
   
   table_make <- httr::POST(
     "http://veiculos.fipe.org.br/api/veiculos/ConsultarMarcas",
     httr::add_headers(Referer = "http://veiculos.fipe.org.br/"),
     body = list(
       codigoTabelaReferencia = reference_code,
-      codigoTipoVeiculo = 1
+      codigoTipoVeiculo = reference_veiculo
     )
   ) %>%
     httr::content("text", encoding = "UTF-8") %>%
@@ -119,13 +120,13 @@ get_make_aux <- function(reference_code) {
 # consulta os modelos disponiveis para um determinado mes
 # de referencia e marca e retorna o codigo correspondente
 #
-get_model_aux <- function(make = NULL, reference_code) {
+get_model_aux <- function(make = NULL, reference_code, reference_veiculo) {
   
   table_model <- httr::POST(
     "http://veiculos.fipe.org.br/api/veiculos/ConsultarModelos",
     httr::add_headers(Referer = "http://veiculos.fipe.org.br/"),
     body = list(
-      codigoTipoVeiculo = 1,
+      codigoTipoVeiculo = reference_veiculo,
       codigoTabelaReferencia = reference_code,
       codigoMarca = make
     )
@@ -141,13 +142,13 @@ get_model_aux <- function(make = NULL, reference_code) {
 
 # extrai tabela com os anos disponíveis de cada modelo
 #
-get_table_year <- function(reference_code, model_code, make_code) {
+get_table_year <- function(reference_code, model_code, make_code, reference_veiculo) {
   
   content <- httr::POST(
     "http://veiculos.fipe.org.br/api/veiculos/ConsultarAnoModelo",
     httr::add_headers(Referer = "http://veiculos.fipe.org.br/"),
     body = list(
-      codigoTipoVeiculo = 1,
+      codigoTipoVeiculo = reference_veiculo,
       codigoTabelaReferencia = reference_code,
       codigoModelo = model_code,
       codigoMarca = make_code
@@ -176,14 +177,14 @@ get_table_year <- function(reference_code, model_code, make_code) {
 # consulta as marcas disponiveis para um determinado mes
 # de referencia e retorna o codigo correspondente
 #
-get_make <- function(make = NULL, reference_code) {
+get_make <- function(make = NULL, reference_code, reference_veiculo) {
   
   table_make <- httr::POST(
     "http://veiculos.fipe.org.br/api/veiculos/ConsultarMarcas",
     httr::add_headers(Referer = "http://veiculos.fipe.org.br/"),
     body = list(
       codigoTabelaReferencia = reference_code,
-      codigoTipoVeiculo = 1
+      codigoTipoVeiculo = reference_veiculo
     )
   ) %>%
     httr::content("text", encoding = "UTF-8") %>%
@@ -209,11 +210,11 @@ get_make <- function(make = NULL, reference_code) {
 # consulta os modelos disponiveis para um determinado mes
 # de referencia e marca e retorna o codigo correspondente
 #
-get_model <- function(model, make = NULL, reference_code) {
+get_model <- function(model, make = NULL, reference_code, reference_veiculo) {
   
   reference_code_max <- reference_code[which.max(reference_code)]
   
-  make_code <- get_make(make, reference_code_max)
+  make_code <- get_make(make, reference_code_max,reference_veiculo)
   
   models <- paste0(stringr::str_to_lower(model), collapse = "|")
   
@@ -223,7 +224,7 @@ get_model <- function(model, make = NULL, reference_code) {
       "http://veiculos.fipe.org.br/api/veiculos/ConsultarModelos",
       httr::add_headers(Referer = "http://veiculos.fipe.org.br/"),
       body = list(
-        codigoTipoVeiculo = 1,
+        codigoTipoVeiculo = reference_veiculo,
         codigoTabelaReferencia = reference_code_max,
         codigoMarca = .x
       )
@@ -245,11 +246,11 @@ get_model <- function(model, make = NULL, reference_code) {
 # consulta o ano do modelo disponivel para um determinado mes
 # de referencia, make e modelo
 #
-get_year <- function(model, make = NULL, year_filter = NULL, reference_code) {
+get_year <- function(model, make = NULL, year_filter = NULL, reference_code,reference_veiculo) {
   
   #reference_code_max <- reference_code[which.max(reference_code)]
   
-  model_code <- get_model(model, make, reference_code)
+  model_code <- get_model(model, make, reference_code,reference_veiculo)
   
   if (nrow(model_code) == 0) stop("Model not found", call. = FALSE)
   
@@ -257,7 +258,7 @@ get_year <- function(model, make = NULL, year_filter = NULL, reference_code) {
     tidyr::crossing(., reference_code_range = range(reference_code)) %>%
     dplyr::mutate(
       year_code = purrr::pmap(
-        list(reference_code_range, model_code, make_code),
+        list(reference_code_range, model_code, make_code,reference_veiculo),
         get_table_year
       )
     ) %>%
@@ -280,7 +281,7 @@ get_year <- function(model, make = NULL, year_filter = NULL, reference_code) {
 
 # consulta o valor do modelo
 #
-get_price <- function(reference_code, make_code, model_code, year_code) {
+get_price <- function(reference_code, make_code, model_code, year_code, reference_veiculo) {
   
   ano <- as.character(
     stringr::str_split(year_code, "-", simplify = TRUE)[1, 1]
@@ -296,7 +297,7 @@ get_price <- function(reference_code, make_code, model_code, year_code) {
       codigoTabelaReferencia = reference_code,
       codigoMarca = make_code,
       codigoModelo = model_code,
-      codigoTipoVeiculo = 1,
+      codigoTipoVeiculo = reference_veiculo,
       anoModelo = ano,
       codigoTipoCombustivel = combustivel,
       tipoVeiculo = "carro",
@@ -340,11 +341,11 @@ get_price <- function(reference_code, make_code, model_code, year_code) {
     )
 }
 
-fipe_vehicle <- function(model, make = NULL, year = NULL,date = Sys.Date(), progress = FALSE,parallel = FALSE) {
+fipe_vehicle <- function(model, make = NULL, year = NULL,date = Sys.Date(), progress = FALSE, parallel = FALSE, reference_veiculo) {
   
   reference_code <- get_reference(date)
   
-  base_cod_ano <- get_year(model, make, year, reference_code)
+  base_cod_ano <- get_year(model, make, year, reference_code, reference_veiculo)
   
   if (parallel) {
     future::plan(future::multiprocess)
@@ -356,7 +357,7 @@ fipe_vehicle <- function(model, make = NULL, year = NULL,date = Sys.Date(), prog
     tidyr::crossing(., reference_code) %>%
     dplyr::mutate(
       price = furrr::future_pmap(
-        list(reference_code, make_code, model_code, year_code),
+        list(reference_code, make_code, model_code, year_code,reference_veiculo),
         get_price, .progress = progress
       )
     ) %>%
@@ -382,6 +383,9 @@ ui <- dashboardPage(
     selectInput("data_referencia",
                 "Data de Referência",
                 choices = format(as.Date(Sys.Date()),format="%b/%Y")),
+    selectInput("cod_veiculo",
+                "Tipo de Veículo",
+                choices = c("Carros","Caminhões e Micro-Ônibus","Motos")),
     uiOutput("secondSelection"),
     uiOutput("terceiroSelection"),
     uiOutput("quartoSelection")
@@ -423,9 +427,12 @@ server <- function(input, output, session) {
   
   rv <- reactiveValues()
   
-  observeEvent(input$data_referencia,{
+  observeEvent(input$cod_veiculo,{
     data_ref = get_reference(lubridate::dmy(paste0("01/", input$data_referencia)))
-    marcas_referencia = get_make_aux(reference_code = data_ref)
+    reference_veiculo = ifelse(input$cod_veiculo == "Carros e Utilitários Pequenos", 1,
+                               ifelse(input$cod_veiculo == "Caminhões e Micro-Ônibus",3,
+                                      ifelse(input$cod_veiculo == "Motos",2,1)))
+    marcas_referencia = get_make_aux(reference_code = data_ref,reference_veiculo)
     
     output$secondSelection <- renderUI({
       selectInput("marca", "Marca do Veículo", choices = c(marcas_referencia$make_name))
@@ -434,8 +441,11 @@ server <- function(input, output, session) {
   
   observeEvent(input$marca,{
     data_ref = get_reference(lubridate::dmy(paste0("01/", input$data_referencia)))
-    marcas_referencia = get_make_aux(reference_code = data_ref)
-    modelos_referencia = get_model_aux(marcas_referencia$make_code[marcas_referencia$make_name == input$marca],data_ref)
+    reference_veiculo = ifelse(input$cod_veiculo == "Carros e Utilitários Pequenos", 1,
+                               ifelse(input$cod_veiculo == "Caminhões e Micro-Ônibus",3,
+                                      ifelse(input$cod_veiculo == "Motos",2,1)))
+    marcas_referencia = get_make_aux(reference_code = data_ref,reference_veiculo)
+    modelos_referencia = get_model_aux(marcas_referencia$make_code[marcas_referencia$make_name == input$marca],data_ref,reference_veiculo)
     
     output$terceiroSelection <- renderUI({
       selectInput("modelo", "Modelo do Veículo", choices = c(modelos_referencia$model_name))
@@ -444,9 +454,13 @@ server <- function(input, output, session) {
   
   observeEvent(input$modelo,{
     data_ref = get_reference(lubridate::dmy(paste0("01/", input$data_referencia)))
-    marcas_referencia = get_make_aux(reference_code = data_ref)
-    modelos_referencia = get_model_aux(marcas_referencia$make_code[marcas_referencia$make_name == input$marca],data_ref)
-    anos_referencia = get_table_year(data_ref,modelos_referencia$model_code[modelos_referencia$model_name == input$modelo],marcas_referencia$make_code[marcas_referencia$make_name == input$marca])
+    reference_veiculo = ifelse(input$cod_veiculo == "Carros", 1,
+                               ifelse(input$cod_veiculo == "Caminhões e Micro-Ônibus",3,
+                                      ifelse(input$cod_veiculo == "Motos",2,1)))
+
+    marcas_referencia = get_make_aux(reference_code = data_ref,reference_veiculo)
+    modelos_referencia = get_model_aux(marcas_referencia$make_code[marcas_referencia$make_name == input$marca],data_ref,reference_veiculo)
+    anos_referencia = get_table_year(data_ref,modelos_referencia$model_code[modelos_referencia$model_name == input$modelo],marcas_referencia$make_code[marcas_referencia$make_name == input$marca],reference_veiculo)
     
     output$quartoSelection <- renderUI({
       selectInput("ano", "Ano do Modelo do Veículo", choices = c(anos_referencia$year))
@@ -460,11 +474,16 @@ server <- function(input, output, session) {
                                   color = "firebrick",
                                   text = "Por Favor, Aguarde! Carregando os dados...")
     
+    reference_veiculo = ifelse(input$cod_veiculo == "Carros", 1,
+                               ifelse(input$cod_veiculo == "Caminhões e Micro-Ônibus",3,
+                                      ifelse(input$cod_veiculo == "Motos",2,1)))
+    
     rv$df_car = fipe_vehicle(model = isolate(input$modelo),
                              make = isolate(input$marca),
                              year = isolate(input$ano),
                              date = seq.Date(as.Date(isolate(input$range[1])), as.Date(isolate(input$range[2])),
-                                             by = "1 months"))
+                                             by = "1 months"),
+                             reference_veiculo = reference_veiculo)
     
     # df_car = reactive({
     #   
