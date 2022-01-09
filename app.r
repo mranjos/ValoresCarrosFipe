@@ -478,7 +478,7 @@ server <- function(input, output, session) {
                                ifelse(input$cod_veiculo == "Caminhões e Micro-Ônibus",3,
                                       ifelse(input$cod_veiculo == "Motos",2,1)))
     
-    rv$df_car = fipe_vehicle(model = isolate(input$modelo),
+    rv$df_car = fipe_vehicle(model = iconv(isolate(input$modelo),to="ASCII//TRANSLIT"),
                              make = isolate(input$marca),
                              year = isolate(input$ano),
                              date = seq.Date(as.Date(isolate(input$range[1])), as.Date(isolate(input$range[2])),
